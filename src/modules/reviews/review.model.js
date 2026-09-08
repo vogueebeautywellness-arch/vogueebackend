@@ -187,6 +187,15 @@ class ReviewModel {
         const [result] = await db.query('UPDATE reviews SET status = ? WHERE id = ?', [next, rid]);
         return Number(result?.affectedRows || 0) > 0;
     }
+
+    static async delete(id) {
+        await this.ensureTable();
+        const rid = Number(id);
+        if (!Number.isFinite(rid) || rid <= 0) return false;
+
+        const [result] = await db.query('DELETE FROM reviews WHERE id = ?', [rid]);
+        return Number(result?.affectedRows || 0) > 0;
+    }
 }
 
 module.exports = ReviewModel;

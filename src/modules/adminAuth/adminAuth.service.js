@@ -71,6 +71,95 @@ class AdminAuthService {
         return admin;
     }
 
+    static async assertAdminManagementAccess(adminId) {
+        const admin = await AdminAuthModel.findById(adminId);
+        if (!admin) {
+            const error = new Error('Admin not found');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        if (String(admin.role).toLowerCase() !== 'admin') {
+            const error = new Error('Only admins can manage other admins');
+            error.statusCode = 403;
+            throw error;
+        }
+
+        return admin;
+    }
+
+    static async listAdmins(adminId) {
+        await AdminAuthModel.ensureTables();
+        await this.assertAdminManagementAccess(adminId);
+        return AdminAuthModel.listAdmins();
+    }
+
+    static async createAdmin(adminId, data) {
+        await AdminAuthModel.ensureTables();
+        await this.assertAdminManagementAccess(adminId);
+
+        const existingAdmin = await AdminAuthModel.findByEmail(data.email);
+        if (existingAdmin) {
+            const error = new Error('Email already registered');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(data.password, salt);
+
+        try {
+            const createdAdminId = await AdminAuthModel.createAdmin({
+                name: data.name,
+                email: data.email,
+                password: hashedPassword,
+                role: 'admin'
+            });
+
+            return AdminAuthModel.findById(createdAdminId);
+        } catch (error) {
+            if (error.code === 'ER_DUP_ENTRY') {
+                const duplicateError = new Error('Email already registered');
+                duplicateError.statusCode = 400;
+                throw duplicateError;
+            }
+            throw error;
+        }
+    }
+
+    static async deleteAdmin(adminId, targetId) {
+        if (!Number.isInteger(targetId) || targetId <= 0) {
+            const error = new Error('Invalid admin ID');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        await AdminAuthModel.ensureTables();
+        await this.assertAdminManagementAccess(adminId);
+
+        if (Number(adminId) === targetId) {
+            const error = new Error('You cannot delete your own admin account');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const targetAdmin = await AdminAuthModel.findById(targetId);
+        if (!targetAdmin) {
+            const error = new Error('Admin not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const affectedRows = await AdminAuthModel.deleteAdmin(targetId, targetAdmin.email);
+        if (!affectedRows) {
+            const error = new Error('Admin not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        return { id: targetId };
+    }
+
     static async forgotPassword(email) {
         const admin = await AdminAuthModel.findByEmail(email);
         if (!admin) {

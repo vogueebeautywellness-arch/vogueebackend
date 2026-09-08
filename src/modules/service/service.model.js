@@ -508,6 +508,7 @@ class ServiceModel {
       ]
     );
 
+    return await ServiceModel.getById(id);
   }
 
   static async updateCommission(id, { commissionType, commissionValue, commissionEnabled }) {

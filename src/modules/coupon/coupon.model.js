@@ -313,6 +313,27 @@ class CouponModel {
     return this.getCouponById(id);
   }
 
+  static async deleteCoupon(id) {
+    await this.ensureTables();
+    const couponId = Number(id);
+    if (!Number.isFinite(couponId) || couponId <= 0) return null;
+
+    const existing = await this.getCouponById(couponId);
+    if (!existing) return null;
+
+    const [usageRows] = await db.query('SELECT COUNT(*) AS total FROM coupon_usages WHERE coupon_id = ?', [couponId]);
+    const [paymentRows] = await db.query('SELECT COUNT(*) AS total FROM payments WHERE coupon_id = ?', [couponId]);
+    const hasHistory = Number(usageRows?.[0]?.total || 0) > 0 || Number(paymentRows?.[0]?.total || 0) > 0;
+
+    if (hasHistory) {
+      await db.query('UPDATE coupons SET is_active = 0, updated_at = NOW() WHERE id = ?', [couponId]);
+      return { id: couponId, archived: true };
+    }
+
+    const [result] = await db.query('DELETE FROM coupons WHERE id = ?', [couponId]);
+    return Number(result?.affectedRows || 0) > 0 ? { id: couponId, archived: false } : null;
+  }
+
   static async countCouponUsageByUser(couponId, userId) {
     await this.ensureTables();
     const cid = Number(couponId);

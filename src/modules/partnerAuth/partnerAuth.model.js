@@ -670,8 +670,11 @@ class PartnerAuthModel {
         );
     }
 
-    static async revokeAllSessionsForUser(partnerId) {
-        await this.revokeSessionForUser(partnerId);
+    static async revokeAllSessionsForUser(partnerId, conn = db) {
+        await conn.query(
+            'UPDATE partner_sessions SET revoked_at = NOW(), updated_at = NOW() WHERE partner_id = ? AND revoked_at IS NULL',
+            [partnerId]
+        );
     }
 }
 

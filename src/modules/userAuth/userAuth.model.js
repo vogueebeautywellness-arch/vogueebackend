@@ -339,24 +339,24 @@ class UserAuthModel {
         return Number(result.affectedRows || 0) > 0;
     }
 
-    static async revokeSessionForUser(userId, refreshToken = null) {
+    static async revokeSessionForUser(userId, refreshToken = null, conn = db) {
         if (refreshToken) {
             const tokenHash = hashRefreshToken(refreshToken);
-            await db.query(
+            await conn.query(
                 'UPDATE user_sessions SET revoked_at = NOW(), updated_at = NOW() WHERE user_id = ? AND refresh_token_hash = ? AND revoked_at IS NULL',
                 [userId, tokenHash]
             );
             return;
         }
 
-        await db.query(
+        await conn.query(
             'UPDATE user_sessions SET revoked_at = NOW(), updated_at = NOW() WHERE user_id = ? AND revoked_at IS NULL',
             [userId]
         );
     }
 
-    static async revokeAllSessionsForUser(userId) {
-        await this.revokeSessionForUser(userId);
+    static async revokeAllSessionsForUser(userId, conn = db) {
+        await this.revokeSessionForUser(userId, null, conn);
     }
 }
 

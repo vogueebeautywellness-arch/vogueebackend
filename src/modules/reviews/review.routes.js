@@ -14,5 +14,6 @@ reviewRoutes.get('/approved', ReviewController.approved);
 adminReviewRoutes.get('/', adminProtect, ReviewController.adminList);
 adminReviewRoutes.put('/:id/approve', adminProtect, ReviewController.approve);
 adminReviewRoutes.put('/:id/reject', adminProtect, ReviewController.reject);
+adminReviewRoutes.delete('/:id', adminProtect, ReviewController.remove);
 
 module.exports = { reviewRoutes, adminReviewRoutes };

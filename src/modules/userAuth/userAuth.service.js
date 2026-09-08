@@ -516,7 +516,7 @@ class UserAuthService {
         return { success: true };
     }
 
-    static async deleteAccount({ userId, ip, device }) {
+    static async deleteAccount({ userId, ip, device, rejectAlreadyDeleted = false }) {
         const id = Number(userId);
         if (!Number.isFinite(id) || id <= 0) {
             const error = new Error('Invalid user id');
@@ -537,10 +537,18 @@ class UserAuthService {
                 throw error;
             }
 
+            if (rejectAlreadyDeleted && String(user.status || '').toLowerCase() === 'deleted') {
+                const error = new Error('User account is already deleted');
+                error.statusCode = 409;
+                throw error;
+            }
+
             await conn.query(
                 `
                 UPDATE users
                 SET
+                                    mobile = CONCAT('deleted_', id),
+                                    country_code = NULL,
                   name = NULL,
                   email = NULL,
                   gender = NULL,
@@ -554,7 +562,7 @@ class UserAuthService {
                 [id]
             );
 
-            await UserAuthModel.revokeAllSessionsForUser(id);
+            await UserAuthModel.revokeAllSessionsForUser(id, conn);
             await conn.query('DELETE FROM user_otp WHERE mobile = ?', [user.mobile]);
 
             await conn.commit();

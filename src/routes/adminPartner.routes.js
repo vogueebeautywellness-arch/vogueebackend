@@ -3,6 +3,8 @@ const router = express.Router();
 
 const db = require('../config/db');
 const { adminProtect } = require('../middlewares/auth.middleware');
+const PartnerAuthService = require('../modules/partnerAuth/partnerAuth.service');
+const { successResponse } = require('../utils/response');
 
 const AdminPartnerController = {
   getAllPartners: async (req, res, next) => {
@@ -34,9 +36,26 @@ const AdminPartnerController = {
     } catch (error) {
       return next(error);
     }
+  },
+
+  deletePartner: async (req, res, next) => {
+    try {
+      const data = await PartnerAuthService.deleteAccount({
+        partnerId: req.params.id,
+        rejectAlreadyDeleted: true,
+        anonymizePersonalData: true,
+        ip: req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || null,
+        device: req.headers['user-agent'] || null
+      });
+
+      return successResponse(res, 200, 'Partner account deleted successfully', data);
+    } catch (error) {
+      return next(error);
+    }
   }
 };
 
 router.get('/partners', adminProtect, AdminPartnerController.getAllPartners);
+router.delete('/partners/:id', adminProtect, AdminPartnerController.deletePartner);
 
 module.exports = router;

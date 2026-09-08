@@ -45,6 +45,30 @@ class AdminAuthModel {
         return rows.length ? rows[0] : null;
     }
 
+    static async listAdmins() {
+        const [rows] = await db.query(
+            "SELECT id, name, email, role, 'active' AS status, created_at FROM admins ORDER BY created_at DESC, id DESC"
+        );
+        return rows;
+    }
+
+    static async deleteAdmin(id, email) {
+        const connection = await db.getConnection();
+
+        try {
+            await connection.beginTransaction();
+            await connection.query('DELETE FROM password_resets WHERE email = ?', [email]);
+            const [result] = await connection.query('DELETE FROM admins WHERE id = ?', [id]);
+            await connection.commit();
+            return result.affectedRows;
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
     static async insertResetToken(email, token, expiresAt) {
         // First delete any existing tokens for this email to prevent spam
         await db.query('DELETE FROM password_resets WHERE email = ?', [email]);

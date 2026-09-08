@@ -2,6 +2,14 @@ const AdminAuthService = require('./adminAuth.service');
 const { registerSchema, loginSchema } = require('./adminAuth.validation');
 const { successResponse, errorResponse } = require('../../utils/response');
 
+const requireAdminRole = (req, res) => {
+    if (String(req.admin?.role || '').toLowerCase() !== 'admin') {
+        errorResponse(res, 403, 'Only admins can manage other admins');
+        return false;
+    }
+    return true;
+};
+
 class AdminAuthController {
     static async register(req, res, next) {
         try {
@@ -38,6 +46,43 @@ class AdminAuthController {
             const adminId = req.admin.id;
             const profile = await AdminAuthService.getAdminProfile(adminId);
             return successResponse(res, 200, 'Profile fetched', profile);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async listAdmins(req, res, next) {
+        try {
+            if (!requireAdminRole(req, res)) return;
+            const admins = await AdminAuthService.listAdmins(req.admin.id);
+            return successResponse(res, 200, 'Admins fetched', admins);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async createAdmin(req, res, next) {
+        try {
+            if (!requireAdminRole(req, res)) return;
+            const { error, value } = registerSchema.validate(req.body, { abortEarly: false });
+            if (error) {
+                const errors = error.details.map(detail => detail.message);
+                return errorResponse(res, 400, 'Validation Error', errors);
+            }
+
+            const admin = await AdminAuthService.createAdmin(req.admin.id, value);
+            return successResponse(res, 201, 'Admin created successfully', admin);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async deleteAdmin(req, res, next) {
+        try {
+            if (!requireAdminRole(req, res)) return;
+            const targetId = Number(req.params.id);
+            const result = await AdminAuthService.deleteAdmin(req.admin.id, targetId);
+            return successResponse(res, 200, 'Admin deleted successfully', result);
         } catch (error) {
             next(error);
         }

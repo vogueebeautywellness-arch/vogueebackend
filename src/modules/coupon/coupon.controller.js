@@ -473,6 +473,25 @@ exports.toggle = async (req, res, next) => {
   }
 };
 
+exports.remove = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await CouponModel.deleteCoupon(id);
+    if (!result) {
+      return errorResponse(res, 404, 'Coupon not found');
+    }
+
+    return successResponse(
+      res,
+      200,
+      result.archived ? 'Coupon archived because it has historical records' : 'Coupon deleted',
+      result
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.reconcileBookingCoupon = async ({ userId, bookingId, bookingData, amount }) => {
   const couponCode = normalizeCode(bookingData?.coupon_code ?? bookingData?.couponCode);
   if (!couponCode) {

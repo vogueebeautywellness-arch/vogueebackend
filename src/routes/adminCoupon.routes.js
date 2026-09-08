@@ -8,5 +8,6 @@ router.get('/coupons', adminProtect, controller.list);
 router.post('/coupons/create', adminProtect, controller.create);
 router.put('/coupons/:id', adminProtect, controller.update);
 router.patch('/coupons/:id/toggle', adminProtect, controller.toggle);
+router.delete('/coupons/:id', adminProtect, controller.remove);
 
 module.exports = router;

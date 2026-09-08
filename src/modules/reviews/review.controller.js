@@ -217,6 +217,25 @@ class ReviewController {
             return next(err);
         }
     }
+
+    static async remove(req, res, next) {
+        try {
+            await ReviewModel.ensureTable();
+            const id = Number(req.params.id);
+            if (!Number.isInteger(id) || id <= 0) {
+                return errorResponse(res, 400, 'Invalid id');
+            }
+
+            const deleted = await ReviewModel.delete(id);
+            if (!deleted) {
+                return errorResponse(res, 404, 'Review not found');
+            }
+
+            return successResponse(res, 200, 'Review deleted', { id });
+        } catch (err) {
+            return next(err);
+        }
+    }
 }
 
 module.exports = ReviewController;

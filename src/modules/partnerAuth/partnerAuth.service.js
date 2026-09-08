@@ -626,7 +626,7 @@ class PartnerAuthService {
         return { success: true };
     }
 
-    static async deleteAccount({ partnerId, ip, device }) {
+    static async deleteAccount({ partnerId, ip, device, rejectAlreadyDeleted = false, anonymizePersonalData = false }) {
         const id = Number(partnerId);
         if (!Number.isFinite(id) || id <= 0) {
             const error = new Error('Invalid partner id');
@@ -648,25 +648,37 @@ class PartnerAuthService {
                 throw error;
             }
 
+            if (rejectAlreadyDeleted && isDeletedPartner(partner)) {
+                const error = new Error('Partner account is already deleted');
+                error.statusCode = 409;
+                throw error;
+            }
+
             kyc = await PartnerKycModel.findByPartnerId(id, conn);
 
             await conn.query(
                 `
                 UPDATE partners
                 SET
+                                    mobile = IF(?, CONCAT('deleted_', id), mobile),
+                                    country_code = IF(?, NULL, country_code),
                   name = NULL,
                   rating = NULL,
                   experience = NULL,
                   avatar = NULL,
                   expo_push_token = NULL,
+                  upi_id = IF(?, NULL, upi_id),
+                  upi_verified = IF(?, false, upi_verified),
+                  upi_verified_at = IF(?, NULL, upi_verified_at),
                   status = 'deleted',
+                  online_status = IF(?, 'OFFLINE', online_status),
                   updated_at = NOW()
                 WHERE id = ?
                 `,
-                [id]
+                [anonymizePersonalData, anonymizePersonalData, anonymizePersonalData, anonymizePersonalData, anonymizePersonalData, anonymizePersonalData, id]
             );
 
-            await PartnerAuthModel.revokeAllSessionsForUser(id);
+            await PartnerAuthModel.revokeAllSessionsForUser(id, conn);
 
             if (kyc) {
                 await conn.query(
@@ -674,6 +686,7 @@ class PartnerAuthService {
                     UPDATE partner_kyc
                     SET
                       full_name = 'Deleted Partner',
+                      mobile = IF(?, CONCAT('deleted_', partner_id), mobile),
                       service_area = 'Deleted',
                       service_latitude = NULL,
                       service_longitude = NULL,
@@ -695,7 +708,7 @@ class PartnerAuthService {
                       updated_at = NOW()
                     WHERE partner_id = ?
                     `,
-                    [id]
+                    [anonymizePersonalData, id]
                 );
             }
 
