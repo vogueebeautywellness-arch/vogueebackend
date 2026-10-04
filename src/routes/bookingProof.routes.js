@@ -386,7 +386,7 @@ router.post('/verify-otp', async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'otp is required' });
         }
 
-        const [rows] = await db.query('SELECT id, service_otp, user_id, service_name, partner_id, booking_status, booking_type, service_mode FROM payments WHERE id = ?', [id]);
+        const [rows] = await db.query('SELECT id, service_otp, user_id, service_name, partner_id, booking_status, booking_type, service_mode, final_amount_after_discount, amount FROM payments WHERE id = ?', [id]);
         if (!rows || !rows.length) {
             return res.status(404).json({ success: false, message: 'Not found' });
         }
@@ -404,6 +404,18 @@ router.post('/verify-otp', async (req, res, next) => {
 
         if (Number(updateResult?.affectedRows || 0) !== 1) {
             return res.json({ success: true, alreadyCompleted: true });
+        }
+
+        // Trigger Referral Commission Calculation (PDF Rule #15)
+        try {
+            const ReferralModel = require('../modules/referral/referral.model');
+            const booking = rows[0];
+            const serviceAmount = Number(booking.final_amount_after_discount || booking.amount || 0);
+            if (serviceAmount > 0) {
+                await ReferralModel.createCommissionForCompletedService(booking.id, booking.user_id, serviceAmount);
+            }
+        } catch (refErr) {
+            console.warn('[referral] Commission trigger warning:', refErr?.message || refErr);
         }
 
         const booking = rows[0];

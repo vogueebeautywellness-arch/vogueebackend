@@ -29,6 +29,7 @@ const adminCouponRoutes = require('./routes/adminCoupon.routes');
 const salonRoutes = require('./modules/salon/salon.route');
 
 const { reviewRoutes, adminReviewRoutes } = require('./modules/reviews/review.routes');
+const referralRoutes = require('./modules/referral/referral.route');
 
 const app = express();
 app.set("trust proxy", 1);
@@ -126,6 +127,9 @@ app.use('/api/expo', expoRoutes);
 
 // Coupons
 app.use('/api/coupons', couponRoutes);
+
+// Referral Partner Program
+app.use('/api/referral', referralRoutes);
 
 // Public API (no auth)
 app.use('/api/categories', publicCategoryRoutes);

@@ -39,6 +39,7 @@ const start = async () => {
         const ServiceModel = require('./src/modules/service/service.model');
         const BannerModel = require('./src/modules/banner/banner.model');
         const PaymentModel = require('./src/modules/payment/payment.model');
+        const ReferralModel = require('./src/modules/referral/referral.model');
         await AdminAuthModel.ensureTables();
         await UserAuthModel.ensureTable();
         await PartnerAuthModel.ensureTable();
@@ -48,6 +49,7 @@ const start = async () => {
         await ServiceModel.ensureTable();
         await BannerModel.ensureTable();
         await PaymentModel.ensureTable();
+        await ReferralModel.ensureTables();
 
         console.log('Database connection initialized successfully.');
         console.log('Database tables ensured.');
